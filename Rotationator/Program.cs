@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 using OatmealDome.BinaryData;
 using OatmealDome.NinLib.Byaml;
@@ -68,7 +69,7 @@ Command command = new RootCommand("Generates a new VSSetting BYAMl file.")
     outputByamlArg
 };
 
-command.SetHandler((lastPath, outPath) => Run(lastPath, outPath), lastByamlArg, outputByamlArg);
+command.SetHandler(context => Run(context));
 
 command.Invoke(args);
 
@@ -76,9 +77,12 @@ command.Invoke(args);
 // Entrypoint
 //
 
-void Run(string lastByamlPath, string outputByamlPath)
+void Run(InvocationContext context)
 {
     Console.WriteLine("run");
+
+    string lastByamlPath = context.ParseResult.GetValueForArgument(lastByamlArg);
+    string outputByamlPath = context.ParseResult.GetValueForArgument(outputByamlArg);
     
     dynamic lastByaml = ByamlFile.Load(lastByamlPath);
     
