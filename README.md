@@ -13,10 +13,11 @@ Usage:
   Rotationator <lastByaml> <outputByaml> [options]
 
 Arguments:
-  <lastByaml>  The last VSSetting BYAML file.
+  <lastByaml>    The last VSSetting BYAML file.
   <outputByaml>  The output VSSetting BYAML file.
 
 Options:
-  --version       Show version information
-  -?, -h, --help  Show help and usage information
+  --phaseLength <phaseLength>  The length of each phase, in hours. [default: 4]
+  --version                    Show version information
+  -?, -h, --help               Show help and usage information
 ```

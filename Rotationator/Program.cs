@@ -1,4 +1,4 @@
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 using OatmealDome.BinaryData;
@@ -11,6 +11,7 @@ using Rotationator;
 //
 
 const int maximumPhases = 192; // TODO correct?
+const int defaultPhaseLength = 4;
 
 Dictionary<VersusRule, List<int>> bannedStages = new Dictionary<VersusRule, List<int>>()
 {
@@ -63,10 +64,14 @@ Argument<string> lastByamlArg = new Argument<string>("lastByaml", "The last VSSe
 
 Argument<string> outputByamlArg = new Argument<string>("outputByaml", "The output VSSetting BYAML file.");
 
+Option<int> phaseLengthOption =
+    new Option<int>("--phaseLength", () => defaultPhaseLength, "The length of each phase in hours.");
+
 Command command = new RootCommand("Generates a new VSSetting BYAMl file.")
 {
     lastByamlArg,
-    outputByamlArg
+    outputByamlArg,
+    phaseLengthOption
 };
 
 command.SetHandler(context => Run(context));
@@ -83,6 +88,7 @@ void Run(InvocationContext context)
 
     string lastByamlPath = context.ParseResult.GetValueForArgument(lastByamlArg);
     string outputByamlPath = context.ParseResult.GetValueForArgument(outputByamlArg);
+    int phaseLength = context.ParseResult.GetValueForOption(phaseLengthOption);
     
     dynamic lastByaml = ByamlFile.Load(lastByamlPath);
     
@@ -127,7 +133,7 @@ void Run(InvocationContext context)
     }
 
     // The last phase is set to 10 years, so correct this to the correct phase length.
-    currentPhases.Last().Length = 4;
+    currentPhases.Last().Length = phaseLength;
     
     //
     // Generate new phases to fill out the schedule
@@ -161,7 +167,7 @@ void Run(InvocationContext context)
         currentPhase.GachiInfo.Stages.Add(PickStage(currentPhase, lastPhase, gachiRule, stagePools[gachiRule]));
         currentPhase.GachiInfo.Stages.Sort();
         
-        currentPhase.Length = 4;
+        currentPhase.Length = phaseLength;
         
         currentPhases.Add(currentPhase);
     }
