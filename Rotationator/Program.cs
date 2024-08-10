@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.Text.Json;
 using OatmealDome.BinaryData;
 using OatmealDome.NinLib.Byaml;
@@ -60,7 +60,7 @@ Random random = new Random();
 
 Argument<string> lastByamlArg = new Argument<string>("lastByaml", "The last VSSetting BYAML file.");
 
-Argument<string> outputByamlArg = new Argument<string>("lastByaml", "The output VSSetting BYAML file.");
+Argument<string> outputByamlArg = new Argument<string>("outputByaml", "The output VSSetting BYAML file.");
 
 Command command = new RootCommand("Generates a new VSSetting BYAMl file.")
 {
