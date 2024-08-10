@@ -88,8 +88,6 @@ command.Invoke(args);
 
 void Run(InvocationContext context)
 {
-    Console.WriteLine("run");
-
     string lastByamlPath = context.ParseResult.GetValueForArgument(lastByamlArg);
     string outputByamlPath = context.ParseResult.GetValueForArgument(outputByamlArg);
     int phaseLength = context.ParseResult.GetValueForOption(phaseLengthOption);
@@ -234,6 +232,8 @@ void Run(InvocationContext context)
     {
         WriteIndented = true
     }));
+    
+    Console.WriteLine("Done!");
 }
 
 //
