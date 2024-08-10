@@ -10,8 +10,8 @@ using Rotationator;
 // Constants
 //
 
-const int maximumPhases = 192; // TODO correct?
 const int defaultPhaseLength = 4;
+const int defaultScheduleLength = 30;
 
 Dictionary<VersusRule, List<int>> bannedStages = new Dictionary<VersusRule, List<int>>()
 {
@@ -67,11 +67,15 @@ Argument<string> outputByamlArg = new Argument<string>("outputByaml", "The outpu
 Option<int> phaseLengthOption =
     new Option<int>("--phaseLength", () => defaultPhaseLength, "The length of each phase in hours.");
 
+Option<int> scheduleLengthOption = new Option<int>("--scheduleLength", () => defaultScheduleLength,
+    "How long the schedule should be in days.");
+
 Command command = new RootCommand("Generates a new VSSetting BYAMl file.")
 {
     lastByamlArg,
     outputByamlArg,
-    phaseLengthOption
+    phaseLengthOption,
+    scheduleLengthOption
 };
 
 command.SetHandler(context => Run(context));
@@ -89,6 +93,7 @@ void Run(InvocationContext context)
     string lastByamlPath = context.ParseResult.GetValueForArgument(lastByamlArg);
     string outputByamlPath = context.ParseResult.GetValueForArgument(outputByamlArg);
     int phaseLength = context.ParseResult.GetValueForOption(phaseLengthOption);
+    int scheduleLength = context.ParseResult.GetValueForOption(scheduleLengthOption);
     
     dynamic lastByaml = ByamlFile.Load(lastByamlPath);
     
@@ -131,9 +136,34 @@ void Run(InvocationContext context)
     {
         throw new NotImplementedException("not supported yet");
     }
-
+    
     // The last phase is set to 10 years, so correct this to the correct phase length.
     currentPhases.Last().Length = phaseLength;
+    
+    //
+    // Find the maximum number of phases to add.
+    //
+    
+    DateTime endTime = baseTime.AddDays(scheduleLength);
+    
+    loopTime = baseTime;
+    
+    for (int i = 0; i < currentPhases.Count; i++)
+    {
+        loopTime = loopTime.AddHours(currentPhases[i].Length);
+    }
+
+    int maximumPhases = currentPhases.Count;
+
+    // This definitely isn't the most efficient way to do this, but it works.
+    while (endTime > loopTime)
+    {
+        maximumPhases++;
+        
+        loopTime = loopTime.AddHours(phaseLength);
+    }
+
+    Console.WriteLine($"Generating {maximumPhases} phases to reach {endTime:O} (already have {currentPhases.Count})");
     
     //
     // Generate new phases to fill out the schedule

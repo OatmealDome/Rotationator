@@ -17,7 +17,8 @@ Arguments:
   <outputByaml>  The output VSSetting BYAML file.
 
 Options:
-  --phaseLength <phaseLength>  The length of each phase, in hours. [default: 4]
-  --version                    Show version information
-  -?, -h, --help               Show help and usage information
+  --phaseLength <phaseLength>        The length of each phase in hours. [default: 4]
+  --scheduleLength <scheduleLength>  How long the schedule should be in days. [default: 30]
+  --version                          Show version information
+  -?, -h, --help                     Show help and usage information
 ```
