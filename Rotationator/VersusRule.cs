@@ -2,7 +2,7 @@ namespace Rotationator;
 
 public enum VersusRule
 {
-    None,
+    None = -1,
     
     /// <summary>
     /// Turf War
