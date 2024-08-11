@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 using OatmealDome.BinaryData;
@@ -54,8 +54,6 @@ List<VersusRule> defaultGachiRulePool = new List<VersusRule>()
     VersusRule.Lift
 };
 
-Random random = new Random();
-
 //
 // Command handling
 //
@@ -97,6 +95,11 @@ void Run(InvocationContext context)
     int phaseLength = context.ParseResult.GetValueForOption(phaseLengthOption);
     int scheduleLength = context.ParseResult.GetValueForOption(scheduleLengthOption);
     string? overridePhasesPath = context.ParseResult.GetValueForOption(overridePhasesOption);
+
+    uint seed = (uint)Environment.TickCount;
+    SeadRandom random = new SeadRandom(seed);
+    
+    Console.WriteLine("Random seed: " + seed);
     
     dynamic lastByaml = ByamlFile.Load(lastByamlPath);
     
@@ -256,7 +259,7 @@ void Run(InvocationContext context)
         for (int j = currentPhase.RegularInfo.Stages.Count; j < 2; j++)
         {
             currentPhase.RegularInfo.Stages.Add(PickStage(currentPhase, lastPhase, nextOverridePhase, VersusRule.Paint,
-                stagePools[VersusRule.Paint]));
+                stagePools[VersusRule.Paint], random));
         }
         
         currentPhase.RegularInfo.Stages.Sort();
@@ -264,13 +267,13 @@ void Run(InvocationContext context)
         if (currentPhase.GachiInfo.Rule == VersusRule.None)
         {
             currentPhase.GachiInfo.Rule = PickGachiRule(currentPhase.GachiInfo, lastPhase.GachiInfo, nextOverridePhase,
-                gachiRulePool);
+                gachiRulePool, random);
         }
         
         for (int j = currentPhase.GachiInfo.Stages.Count; j < 2; j++)
         {
             currentPhase.GachiInfo.Stages.Add(PickStage(currentPhase, lastPhase, nextOverridePhase,
-                currentPhase.GachiInfo.Rule, stagePools[currentPhase.GachiInfo.Rule]));
+                currentPhase.GachiInfo.Rule, stagePools[currentPhase.GachiInfo.Rule], random));
         }
         
         currentPhase.GachiInfo.Stages.Sort();
@@ -320,14 +323,14 @@ void Run(InvocationContext context)
 // Utility function to pick a random element from a pool.
 //
 
-T GetRandomElementFromPool<T>(List<T> pool, Func<T, bool> validityChecker)
+T GetRandomElementFromPool<T>(List<T> pool, Func<T, bool> validityChecker, SeadRandom random)
 {
     T element;
     int tries = 0;
     
     do
     {
-        element = pool[random.Next(0, pool.Count)];
+        element = pool[random.GetInt32(pool.Count)];
 
         tries++;
 
@@ -347,7 +350,7 @@ T GetRandomElementFromPool<T>(List<T> pool, Func<T, bool> validityChecker)
 //
 
 VersusRule PickGachiRule(GambitStageInfo stageInfo, GambitStageInfo lastStageInfo, OverridePhase? nextPhaseOverride,
-    List<VersusRule> pool)
+    List<VersusRule> pool, SeadRandom random)
 {
     if (pool.Count == 0)
     {
@@ -363,13 +366,13 @@ VersusRule PickGachiRule(GambitStageInfo stageInfo, GambitStageInfo lastStageInf
                 return false;
             }
         }
-        
+
         return rule != lastStageInfo.Rule;
-    });
+    }, random);
 }
 
 int PickStage(GambitVersusPhase phase, GambitVersusPhase lastPhase, OverridePhase? nextPhaseOverride, VersusRule rule,
-    List<int> pool)
+    List<int> pool, SeadRandom random)
 {
     List<int> bannedStagesForRule = bannedStages[rule];
 
@@ -418,5 +421,5 @@ int PickStage(GambitVersusPhase phase, GambitVersusPhase lastPhase, OverridePhas
         pool = newPool.ToList();
     }
 
-    return GetRandomElementFromPool(pool, IsStageValid);
+    return GetRandomElementFromPool(pool, IsStageValid, random);
 }
