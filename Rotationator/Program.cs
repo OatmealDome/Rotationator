@@ -357,7 +357,7 @@ VersusRule PickGachiRule(GambitStageInfo stageInfo, GambitStageInfo lastStageInf
         pool.AddRange(defaultGachiRulePool);
     }
 
-    return GetRandomElementFromPool(pool, rule =>
+    bool IsRuleValid(VersusRule rule)
     {
         if (nextPhaseOverride != null)
         {
@@ -366,9 +366,26 @@ VersusRule PickGachiRule(GambitStageInfo stageInfo, GambitStageInfo lastStageInf
                 return false;
             }
         }
-
+        
         return rule != lastStageInfo.Rule;
-    }, random);
+    }
+
+    if (pool.All(r => !IsRuleValid(r)))
+    {
+        List<VersusRule> forbiddenRules = new List<VersusRule>()
+        {
+            lastStageInfo.Rule
+        };
+
+        if (nextPhaseOverride != null)
+        {
+            forbiddenRules.Add(nextPhaseOverride.GachiRule);
+        }
+
+        pool = defaultGachiRulePool.Except(forbiddenRules).ToList();
+    }
+
+    return GetRandomElementFromPool(pool, IsRuleValid, random);
 }
 
 int PickStage(GambitVersusPhase phase, GambitVersusPhase lastPhase, OverridePhase? nextPhaseOverride, VersusRule rule,
