@@ -1,4 +1,4 @@
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 using OatmealDome.BinaryData;
@@ -323,10 +323,18 @@ void Run(InvocationContext context)
 T GetRandomElementFromPool<T>(List<T> pool, Func<T, bool> validityChecker)
 {
     T element;
+    int tries = 0;
     
     do
     {
         element = pool[random.Next(0, pool.Count)];
+
+        tries++;
+
+        if (tries > 10000)
+        {
+            throw new Exception("Possible infinite loop detected in GetRandomElementFromPool");
+        }
     } while (!validityChecker(element));
     
     pool.Remove(element);
