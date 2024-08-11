@@ -1,4 +1,4 @@
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 using OatmealDome.BinaryData;
@@ -71,13 +71,16 @@ Option<int> scheduleLengthOption = new Option<int>("--scheduleLength", () => def
 Option<string?> overridePhasesOption =
     new Option<string?>("--overridePhases", () => null, "The override phases file.");
 
+Option<uint?> seedOption = new Option<uint?>("--randomSeed", () => null, "The seed for the random number generator.");
+
 Command command = new RootCommand("Generates a new VSSetting BYAMl file.")
 {
     lastByamlArg,
     outputByamlArg,
     phaseLengthOption,
     scheduleLengthOption,
-    overridePhasesOption
+    overridePhasesOption,
+    seedOption
 };
 
 command.SetHandler(context => Run(context));
@@ -95,8 +98,9 @@ void Run(InvocationContext context)
     int phaseLength = context.ParseResult.GetValueForOption(phaseLengthOption);
     int scheduleLength = context.ParseResult.GetValueForOption(scheduleLengthOption);
     string? overridePhasesPath = context.ParseResult.GetValueForOption(overridePhasesOption);
+    uint? specifiedSeed = context.ParseResult.GetValueForOption(seedOption);
 
-    uint seed = (uint)Environment.TickCount;
+    uint seed = specifiedSeed ?? (uint)Environment.TickCount;
     SeadRandom random = new SeadRandom(seed);
     
     Console.WriteLine("Random seed: " + seed);
