@@ -308,13 +308,7 @@ void Run(InvocationContext context)
         { "BaseByamlStartTime", baseTime.ToString("O") },
         { "PhaseLength", phaseLength },
         { "ScheduleLength", scheduleLength },
-        { "RandomSeed", seed.ToString() },
-        {
-            "OverridePhases",
-            overridePhases.Select(p =>
-                    new KeyValuePair<string, dynamic>(p.Key.ToString("O"), p.Value.ToByamlCompatibleFormat()))
-                .ToDictionary()
-        }
+        { "RandomSeed", seed.ToString() }
     };
     
     ByamlFile.Save(outputByamlPath, lastByaml, new ByamlSerializerSettings()
