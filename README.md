@@ -19,6 +19,7 @@ Arguments:
 Options:
   --phaseLength <phaseLength>        The length of each phase in hours. [default: 4]
   --scheduleLength <scheduleLength>  How long the schedule should be in days. [default: 30]
+  --overridePhases <overridePhases>  The override phases file. []
   --version                          Show version information
   -?, -h, --help                     Show help and usage information
 ```

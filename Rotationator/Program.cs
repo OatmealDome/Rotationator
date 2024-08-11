@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 using OatmealDome.BinaryData;
@@ -70,12 +70,16 @@ Option<int> phaseLengthOption =
 Option<int> scheduleLengthOption = new Option<int>("--scheduleLength", () => defaultScheduleLength,
     "How long the schedule should be in days.");
 
+Option<string?> overridePhasesOption =
+    new Option<string?>("--overridePhases", () => null, "The override phases file.");
+
 Command command = new RootCommand("Generates a new VSSetting BYAMl file.")
 {
     lastByamlArg,
     outputByamlArg,
     phaseLengthOption,
-    scheduleLengthOption
+    scheduleLengthOption,
+    overridePhasesOption
 };
 
 command.SetHandler(context => Run(context));
@@ -92,6 +96,7 @@ void Run(InvocationContext context)
     string outputByamlPath = context.ParseResult.GetValueForArgument(outputByamlArg);
     int phaseLength = context.ParseResult.GetValueForOption(phaseLengthOption);
     int scheduleLength = context.ParseResult.GetValueForOption(scheduleLengthOption);
+    string? overridePhasesPath = context.ParseResult.GetValueForOption(overridePhasesOption);
     
     dynamic lastByaml = ByamlFile.Load(lastByamlPath);
     
@@ -139,6 +144,28 @@ void Run(InvocationContext context)
     currentPhases.Last().Length = phaseLength;
     
     //
+    // Load the override phases
+    //
+
+    Dictionary<DateTime, OverridePhase> overridePhases;
+
+    if (overridePhasesPath != null)
+    {
+        string overridePhasesJson = File.ReadAllText(overridePhasesPath);
+        Dictionary<string, OverridePhase> overridePhasesStrKey =
+            JsonSerializer.Deserialize<Dictionary<string, OverridePhase>>(overridePhasesJson)!;
+
+        overridePhases = overridePhasesStrKey.Select(p =>
+            new KeyValuePair<DateTime, OverridePhase>(DateTime.Parse(p.Key).ToUniversalTime(), p.Value)).ToDictionary();
+        
+        Console.WriteLine($"Loaded {overridePhases.Count} override phases");
+    }
+    else
+    {
+        overridePhases = new Dictionary<DateTime, OverridePhase>();
+    }
+    
+    //
     // Find the maximum number of phases to add.
     //
     
@@ -148,8 +175,18 @@ void Run(InvocationContext context)
     
     for (int i = 0; i < currentPhases.Count; i++)
     {
-        loopTime = loopTime.AddHours(currentPhases[i].Length);
+        GambitVersusPhase phase = currentPhases[i];
+
+        // This is the most convenient place to do this.
+        if (overridePhases.TryGetValue(loopTime, out OverridePhase? overridePhase))
+        {
+            phase.ApplyOverridePhase(overridePhase);
+        }
+        
+        loopTime = loopTime.AddHours(phase.Length);
     }
+
+    DateTime newPhaseBaseTime = loopTime;
 
     int maximumPhases = currentPhases.Count;
 
@@ -158,7 +195,18 @@ void Run(InvocationContext context)
     {
         maximumPhases++;
         
-        loopTime = loopTime.AddHours(phaseLength);
+        int length;
+        
+        if (overridePhases.TryGetValue(loopTime, out OverridePhase? phase))
+        {
+            length = phase.Length;
+        }
+        else
+        {
+            length = phaseLength;
+        }
+        
+        loopTime = loopTime.AddHours(length);
     }
 
     Console.WriteLine($"Generating {maximumPhases} phases to reach {endTime:O} (already have {currentPhases.Count})");
@@ -176,28 +224,60 @@ void Run(InvocationContext context)
         { VersusRule.Lift, new List<int>() }
     };
 
+    DateTime currentTime = newPhaseBaseTime;
+
     for (int i = currentPhases.Count; i < maximumPhases; i++)
     {
         GambitVersusPhase currentPhase = new GambitVersusPhase();
         GambitVersusPhase lastPhase = i != 0 ? currentPhases[i - 1] : new GambitVersusPhase();
+
+        if (overridePhases.TryGetValue(currentTime, out OverridePhase? overridePhase))
+        {
+            currentPhase.ApplyOverridePhase(overridePhase);
+        }
         
-        VersusRule gachiRule = PickGachiRule(currentPhase.GachiInfo, lastPhase.GachiInfo, gachiRulePool);
+        // Calculate next phase time
+        
+        if (currentPhase.Length <= 0)
+        {
+            currentPhase.Length = phaseLength;
+        }
+        
+        DateTime nextPhaseTime = currentTime.AddHours(currentPhase.Length);
+        
+        // Grab the next override phase for later use
+
+        overridePhases.TryGetValue(nextPhaseTime, out OverridePhase? nextOverridePhase);
+        
+        // Populate rules and stages
 
         currentPhase.RegularInfo.Rule = VersusRule.Paint;
-        currentPhase.RegularInfo.Stages.Add(PickStage(currentPhase, lastPhase, VersusRule.Paint,
-            stagePools[VersusRule.Paint]));
-        currentPhase.RegularInfo.Stages.Add(PickStage(currentPhase, lastPhase, VersusRule.Paint,
-            stagePools[VersusRule.Paint]));
+
+        for (int j = currentPhase.RegularInfo.Stages.Count; j < 2; j++)
+        {
+            currentPhase.RegularInfo.Stages.Add(PickStage(currentPhase, lastPhase, nextOverridePhase, VersusRule.Paint,
+                stagePools[VersusRule.Paint]));
+        }
+        
         currentPhase.RegularInfo.Stages.Sort();
         
-        currentPhase.GachiInfo.Rule = gachiRule;
-        currentPhase.GachiInfo.Stages.Add(PickStage(currentPhase, lastPhase, gachiRule, stagePools[gachiRule]));
-        currentPhase.GachiInfo.Stages.Add(PickStage(currentPhase, lastPhase, gachiRule, stagePools[gachiRule]));
+        if (currentPhase.GachiInfo.Rule == VersusRule.None)
+        {
+            currentPhase.GachiInfo.Rule = PickGachiRule(currentPhase.GachiInfo, lastPhase.GachiInfo, nextOverridePhase,
+                gachiRulePool);
+        }
+        
+        for (int j = currentPhase.GachiInfo.Stages.Count; j < 2; j++)
+        {
+            currentPhase.GachiInfo.Stages.Add(PickStage(currentPhase, lastPhase, nextOverridePhase,
+                currentPhase.GachiInfo.Rule, stagePools[currentPhase.GachiInfo.Rule]));
+        }
+        
         currentPhase.GachiInfo.Stages.Sort();
         
-        currentPhase.Length = phaseLength;
-        
         currentPhases.Add(currentPhase);
+
+        currentTime = nextPhaseTime;
     }
     
     //
@@ -258,17 +338,30 @@ T GetRandomElementFromPool<T>(List<T> pool, Func<T, bool> validityChecker)
 // Random stage + rule pickers.
 //
 
-VersusRule PickGachiRule(GambitStageInfo stageInfo, GambitStageInfo lastStageInfo, List<VersusRule> pool)
+VersusRule PickGachiRule(GambitStageInfo stageInfo, GambitStageInfo lastStageInfo, OverridePhase? nextPhaseOverride,
+    List<VersusRule> pool)
 {
     if (pool.Count == 0)
     {
         pool.AddRange(defaultGachiRulePool);
     }
 
-    return GetRandomElementFromPool(pool, rule => rule != lastStageInfo.Rule);
+    return GetRandomElementFromPool(pool, rule =>
+    {
+        if (nextPhaseOverride != null)
+        {
+            if (nextPhaseOverride.GachiRule == rule)
+            {
+                return false;
+            }
+        }
+        
+        return rule != lastStageInfo.Rule;
+    });
 }
 
-int PickStage(GambitVersusPhase phase, GambitVersusPhase lastPhase, VersusRule rule, List<int> pool)
+int PickStage(GambitVersusPhase phase, GambitVersusPhase lastPhase, OverridePhase? nextPhaseOverride, VersusRule rule,
+    List<int> pool)
 {
     List<int> bannedStagesForRule = bannedStages[rule];
 
@@ -300,13 +393,21 @@ int PickStage(GambitVersusPhase phase, GambitVersusPhase lastPhase, VersusRule r
         // If so, pick a random stage from the default pool, excluding:
         // - the current phase's stages (in both Regular and Gachi)
         // - the last phase's stages (in both Regular and Gachi)
+        // - the next phase's stages (in both Regular and Gachi, if known)
         // - all banned stages for this rule
-        pool = defaultStagePool.Except(phase.RegularInfo.Stages)
+        IEnumerable<int> newPool = defaultStagePool.Except(phase.RegularInfo.Stages)
             .Except(phase.GachiInfo.Stages)
             .Except(lastPhase.RegularInfo.Stages)
             .Except(lastPhase.GachiInfo.Stages)
-            .Except(bannedStagesForRule)
-            .ToList();
+            .Except(bannedStagesForRule);
+
+        if (nextPhaseOverride != null)
+        {
+            newPool = newPool.Except(nextPhaseOverride.RegularStages)
+                .Except(nextPhaseOverride.GachiStages);
+        }
+
+        pool = newPool.ToList();
     }
 
     return GetRandomElementFromPool(pool, IsStageValid);

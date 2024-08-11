@@ -70,4 +70,41 @@ public class GambitVersusPhase
 
         return byamlPhase;
     }
+
+    public void ApplyOverridePhase(OverridePhase overridePhase)
+    {
+        if (overridePhase.Length > 0)
+        {
+            Length = overridePhase.Length;
+        }
+
+        List<int> GetStageList(List<int> overrideList, List<int> normalList)
+        {
+            List<int> stages = new List<int>();
+            
+            for (int i = 0; i < 2; i++)
+            {
+                int overrideStage = overrideList[i];
+            
+                if (overrideStage != -1)
+                {
+                    stages.Add(overrideStage);
+                }
+                else if (i < normalList.Count)
+                {
+                    stages.Add(normalList[i]);
+                }
+            }
+
+            return stages;
+        }
+
+        RegularInfo.Stages = GetStageList(overridePhase.RegularStages, RegularInfo.Stages);
+        GachiInfo.Stages = GetStageList(overridePhase.GachiStages, GachiInfo.Stages);
+
+        if (overridePhase.GachiRule != VersusRule.None)
+        {
+            GachiInfo.Rule = overridePhase.GachiRule;
+        }
+    }
 }
