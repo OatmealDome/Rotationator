@@ -25,4 +25,15 @@ public class OverridePhase
         get;
         set;
     }
+
+    public Dictionary<string, dynamic> ToByamlCompatibleFormat()
+    {
+        return new Dictionary<string, dynamic>()
+        {
+            { "Length", Length },
+            { "RegularStages", RegularStages },
+            { "GachiRule", GachiRule.ToEnumString() },
+            { "GachiStages", GachiStages }
+        };
+    }
 }

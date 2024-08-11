@@ -302,7 +302,13 @@ void Run(InvocationContext context)
         { "Generator", "Rotationator 1" },
         { "GenerationTime", referenceNow.ToString("O") },
         { "BaseByamlStartTime", baseTime.ToString("O") },
-        { "RandomSeed", seed.ToString() }
+        { "RandomSeed", seed.ToString() },
+        {
+            "OverridePhases",
+            overridePhases.Select(p =>
+                    new KeyValuePair<string, dynamic>(p.Key.ToString("O"), p.Value.ToByamlCompatibleFormat()))
+                .ToDictionary()
+        }
     };
     
     ByamlFile.Save(outputByamlPath, lastByaml, new ByamlSerializerSettings()
