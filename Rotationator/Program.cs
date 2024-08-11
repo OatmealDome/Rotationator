@@ -1,4 +1,4 @@
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 using OatmealDome.BinaryData;
@@ -302,6 +302,7 @@ void Run(InvocationContext context)
         { "Generator", "Rotationator 1" },
         { "GenerationTime", referenceNow.ToString("O") },
         { "BaseByamlStartTime", baseTime.ToString("O") },
+        { "RandomSeed", seed.ToString() }
     };
     
     ByamlFile.Save(outputByamlPath, lastByaml, new ByamlSerializerSettings()
