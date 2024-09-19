@@ -1,4 +1,4 @@
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 using OatmealDome.BinaryData;
@@ -114,41 +114,50 @@ void Run(InvocationContext context)
     // Find phase start point
     //
     
-    DateTime loopTime = lastBaseTime;
     DateTime referenceNow = DateTime.UtcNow;
-
-    int lastPhasesStartIdx = -1;
-
-    for (int i = 0; i < lastPhases.Count; i++)
-    {
-        Dictionary<string, dynamic> phase = lastPhases[i];
-
-        DateTime phaseEndTime = loopTime.AddHours((int)phase["Time"]);
-
-        if (referenceNow >= loopTime && phaseEndTime > referenceNow)
-        {
-            lastPhasesStartIdx = i;
-            break;
-        }
-
-        loopTime = phaseEndTime;
-    }
+    
+    DateTime loopTime = lastBaseTime;
 
     DateTime baseTime;
     List<GambitVersusPhase> currentPhases;
 
-    if (lastPhasesStartIdx != -1)
+    if (lastPhases.Count > 0)
     {
-        baseTime = loopTime;
-        currentPhases = lastPhases.Skip(lastPhasesStartIdx).Select(p => new GambitVersusPhase(p)).ToList();
+        int lastPhasesStartIdx = -1;
+
+        for (int i = 0; i < lastPhases.Count; i++)
+        {
+            Dictionary<string, dynamic> phase = lastPhases[i];
+
+            DateTime phaseEndTime = loopTime.AddHours((int)phase["Time"]);
+
+            if (referenceNow >= loopTime && phaseEndTime > referenceNow)
+            {
+                lastPhasesStartIdx = i;
+                break;
+            }
+
+            loopTime = phaseEndTime;
+        }
+        
+        if (lastPhasesStartIdx != -1)
+        {
+            baseTime = loopTime;
+            currentPhases = lastPhases.Skip(lastPhasesStartIdx).Select(p => new GambitVersusPhase(p)).ToList();
+        }
+        else
+        {
+            throw new NotImplementedException("not supported yet");
+        }
+        
+        // The last phase is set to 10 years, so correct this to the correct phase length.
+        currentPhases.Last().Length = phaseLength;
     }
     else
     {
-        throw new NotImplementedException("not supported yet");
+        baseTime = lastBaseTime;
+        currentPhases = new List<GambitVersusPhase>();
     }
-    
-    // The last phase is set to 10 years, so correct this to the correct phase length.
-    currentPhases.Last().Length = phaseLength;
     
     //
     // Load the override phases
