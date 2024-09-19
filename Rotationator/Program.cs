@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 using OatmealDome.BinaryData;
@@ -214,6 +214,11 @@ void Run(InvocationContext context)
         }
         
         loopTime = loopTime.AddHours(length);
+    }
+    
+    if (maximumPhases > 256)
+    {
+        throw new Exception("Gambit can only load up to 256 rotations at a time");
     }
 
     Console.WriteLine($"Generating {maximumPhases} phases to reach {endTime:O} (already have {currentPhases.Count})");
