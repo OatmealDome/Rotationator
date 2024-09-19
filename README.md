@@ -1,6 +1,6 @@
 # Rotationator
 
-Generates a new `VSSetting.byaml` file for Splatoon 1.
+Generates a new `VSSetting.byaml` file for Splatoon 1. This application is currently being used by [Pretendo](pretendo.network) to generate rotations for their custom Splatoon 1 server.
 
 ## Usage
 
