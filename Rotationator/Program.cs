@@ -336,6 +336,35 @@ void Run(InvocationContext context)
     {
         WriteIndented = true
     }));
+
+    string humanReadablePath = outputByamlPath + ".txt";
+
+    if (File.Exists(humanReadablePath))
+    {
+        File.Delete(humanReadablePath);
+    }
+    
+    using FileStream humanReadableStream = File.OpenWrite(humanReadablePath);
+    using StreamWriter humanReadableWriter = new StreamWriter(humanReadableStream);
+
+    DateTime humanReadableTime = baseTime;
+
+    foreach (GambitVersusPhase phase in currentPhases)
+    {
+        humanReadableWriter.Write(humanReadableTime.ToString("O"));
+        humanReadableWriter.WriteLine($" ({phase.Length} hours)");
+        humanReadableWriter.Write("Regular: ");
+        humanReadableWriter.Write(LocalizeRule(phase.RegularInfo.Rule));
+        humanReadableWriter.Write(" / ");
+        humanReadableWriter.WriteLine(string.Join(", ", phase.RegularInfo.Stages.Select(s => LocalizeStage(s))));
+        humanReadableWriter.Write("Gachi: ");
+        humanReadableWriter.Write(LocalizeRule(phase.GachiInfo.Rule));
+        humanReadableWriter.Write(" / ");
+        humanReadableWriter.WriteLine(string.Join(", ", phase.GachiInfo.Stages.Select(s => LocalizeStage(s))));
+        humanReadableWriter.WriteLine();
+
+        humanReadableTime = humanReadableTime.AddHours(phase.Length);
+    }
     
     Console.WriteLine("Done!");
 }
@@ -460,4 +489,64 @@ int PickStage(GambitVersusPhase phase, GambitVersusPhase lastPhase, OverridePhas
     }
 
     return GetRandomElementFromPool(pool, IsStageValid, random);
+}
+
+string LocalizeStage(int id)
+{
+    switch (id)
+    {
+        case 0:
+            return "Urchin Underpass";
+        case 1:
+            return "Walleye Warehouse";
+        case 2:
+            return "Saltspray Rig";
+        case 3:
+            return "Arowana Mall";
+        case 4:
+            return "Blackbelly Skatepark";
+        case 5:
+            return "Camp Triggerfish";
+        case 6:
+            return "Port Mackerel";
+        case 7:
+            return "Kelp Dome";
+        case 8:
+            return "Moray Towers";
+        case 9:
+            return "Bluefin Depot";
+        case 10:
+            return "Hammerhead Bridge";
+        case 11:
+            return "Flounder Heights";
+        case 12:
+            return "Museum d'Alfonsino";
+        case 13:
+            return "Ancho-V Games";
+        case 14:
+            return "Piranha Pit";
+        case 15:
+            return "Mahi-Mahi Resort";
+        default:
+            throw new Exception($"Unknown stage {id}");
+    }
+}
+
+string LocalizeRule(VersusRule rule)
+{
+    switch (rule)
+    {
+        case VersusRule.None:
+            return "None";
+        case VersusRule.Paint:
+            return "Turf War";
+        case VersusRule.Goal:
+            return "Rainmaker";
+        case VersusRule.Area:
+            return "Splat Zones";
+        case VersusRule.Lift:
+            return "Tower Control";
+        default:
+            throw new Exception($"Unknown rule {rule}");
+    }
 }
